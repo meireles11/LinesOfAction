@@ -1,7 +1,7 @@
 # LinesOfAction
 
 A Python implementation of the board game *Lines of Action*, created as part of a university project.  
-Includes three game modes: Player vs Player, Player vs AI and AI vs AI.
+Includes two game modes: Player vs Player and Player vs AI.
 
 ## About the Game
 
@@ -25,8 +25,7 @@ For full rules, see: [Wikipedia – Lines of Action](https://en.wikipedia.org/wi
 - Valid move highlighting
 - AI opponent using Minimax algorithm (with adjustable difficulty)
 - Hint system: when the player clicks on the piece that the AI considers best to move, the suggested best move is highlighted in blue.
-- Three modes:
-  - `AI_vs_AI.py`
+- Two modes:
   - `player_vs_AI.py`
   - `player_vs_player.py`
 
@@ -47,6 +46,5 @@ Run one of the following files depending on the mode you want:
 ```bash
 python player_vs_player.py  # Two players on same machine
 python player_vs_ai.py      # Play against the AI
-python ai_vs_ai.py          # Watch two AIs play each other
 ```
 
