@@ -235,7 +235,7 @@ class LineOfAction:
         xi, yi, xf, yf = move
         self.board[yf][xf] = self.board[yi][xi]
         self.board[yi][xi] = '.'
-        self.player = 'B' if self.player == 'W' else 'W'  # Troca de jogador
+        self.player = 'B' if self.player == 'W' else 'W'  # Switch Player
     
     def reset(self):
         self.board = self.initialize_board()
@@ -244,15 +244,15 @@ class LineOfAction:
 
 
 def apply_move_copy(state, move):
-    """Aplica um movimento ao estado e retorna um novo estado sem modificar o original e sem trocar de jogador."""
-    new_state = deepcopy(state)  # Criar uma cópia do estado
+    # Applies a move to the state and returns a new state without modifying the original and without switching players.
+    new_state = deepcopy(state)  # Create a copy of the state
     xi, yi, xf, yf = move
     new_state.board[yf][xf] = new_state.board[yi][xi]
     new_state.board[yi][xi] = '.'
     return new_state
 
 def minimax(state, depth, maximizing_player, alpha, beta):
-    """Implementação do algoritmo Minimax com poda alfa-beta."""
+    # Implementation of the Minimax algorithm with alpha-beta pruning.
     if maximizing_player:
         max_eval = -math.inf
         for move in valid_moves(state.board, state.player):
@@ -283,7 +283,7 @@ def minimax(state, depth, maximizing_player, alpha, beta):
         return min_eval
 
 def best_move(state, depth):
-    """Retorna o melhor movimento para o jogador atual usando Minimax."""
+    # Returns the best move to the current player with Minimax
     best_move = None
     alpha, beta = -math.inf, math.inf
     maximizing = state.player == 'B'
@@ -311,10 +311,9 @@ def best_move(state, depth):
 
 
 def mcts_search(state, simulations=1000):
-    """
-    Implementação simplificada do Monte Carlo Tree Search (MCTS).
-    Faz simulações aleatórias e escolhe a jogada que levou a mais vitórias.
-    """
+    #Simplified implementation of Monte Carlo Tree Search (MCTS).
+    # Performs random simulations and selects the move that led to the most victories.
+
     move_scores = {move: 0 for move in valid_moves(state.board, state.player)}
 
     for _ in range(simulations):
@@ -324,81 +323,60 @@ def mcts_search(state, simulations=1000):
         result = simulate_game(new_state)
         move_scores[move] += result
 
-    # Escolhe a jogada com maior score nas simulações
+    # Chose the move with the highest score in the simulations
     best_move = max(move_scores, key=move_scores.get)
     return best_move
 
 def simulate_game(state):
     """
-    Simula um jogo aleatório a partir do estado atual e retorna:
-    - 1 se o jogador atual ganhar
-    - -1 se o oponente ganhar
-    - 0 se der empate
+    Simulates a random game from the current state and returns:
+        1 if the current player wins
+        -1 if the opponent wins
+        0 if it's a draw
     """
     player = state.player
     while True:
         moves = valid_moves(state.board, player)
         if not moves:
-            return 0  # Empate
+            return 0  # Draw
 
         move = random.choice(moves)
         state = apply_move_copy(state, move)
 
-        # Verifica se há um vencedor após a jogada
+        # Checks if there is a winner after the move 
         winner = check_victory(state)
         if winner is not None:
-            return 1 if winner == player else -1  # Quem fez a última jogada ganha
+            return 1 if winner == player else -1  # The player that did the last move wins
 
-        player = 'B' if player == 'W' else 'W'  # Alterna o jogador
+        player = 'B' if player == 'W' else 'W'  # Change player
 
 def strategy(state, depth=3):
-    """
-    Escolhe se usa Minimax ou Monte Carlo para determinar a melhor jogada.
-    Usa Minimax para estados iniciais (poucas jogadas) e MCTS para estados mais complexos.
-    """
+    # Chooses whether to use Minimax or Monte Carlo to determine the best move.
+    # Uses Minimax for early-game states (few moves made) and MCTS for more complex states.
+
     num_moves = len(valid_moves(state.board, state.player))
 
-    if num_moves <= 20:  # Número arbitrário, pode ser ajustado conforme testes
-        return best_move(state, depth)  # Usa Minimax
+    if num_moves <= 20: 
+        return best_move(state, depth)  # Minimax
     else:
-        return mcts_search(state, simulations=1000)  # Usa MCTS quando há muitas opções
+        return mcts_search(state, simulations=1000)  # MCTS
 
-#def main():
-#    pygame.init()
-#    screen = pygame.display.set_mode((TILE_SIZE * BOARD_SIZE, TILE_SIZE * BOARD_SIZE))
-#    pygame.display.set_caption("Lines of Action") #Sets the title
-#
-#    game = LineOfAction()  
-#    clock = pygame.time.Clock()
-#
-#    running = True
-#    while running: #keeps the game runnig until the user quits
-#        screen.fill((0, 0, 0))  # "Cleans" the last game filling the background with black
-#       game.display_board(screen)
-#
-#        for event in pygame.event.get():
-#            if event.type == pygame.QUIT:
-#                running = False
-#
-#        clock.tick(60)  # Limits to 60 frames per second
-#
-#    pygame.quit()
 
 
 def main():
     pygame.init()
-    WIDTH = TILE_SIZE * BOARD_SIZE  # Definir antes de criar a tela
+    WIDTH = TILE_SIZE * BOARD_SIZE  # Define before creating the screen
     HEIGHT = TILE_SIZE * BOARD_SIZE
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Lines of Action - Humano contra Humano")
+    pygame.display.set_caption("Lines of Action - Human against Human")
 
     game = LineOfAction()
     clock = pygame.time.Clock()
     pygame.font.init()
     font = pygame.font.SysFont(None, 50)
-    button_font = pygame.font.SysFont(None, 36)  # Fonte separada para o botão
+    button_font = pygame.font.SysFont(None, 36)  # Separate font for the button
 
-    # Variáveis para controle da interface
+    # Variables for interface control
     selected_piece = None
     valid_targets = []
     current_player = game.player
@@ -409,13 +387,13 @@ def main():
         screen.fill((0, 0, 0))
         game.display_board(screen)
 
-        # Desenhar destaque para peça selecionada
+        # Draw highlight for the selected piece
         if selected_piece:
             x, y = selected_piece
             pygame.draw.rect(screen, (0, 255, 0), 
                            (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE), 3)
 
-        # Desenhar destaque para movimentos válidos
+        # Draw highlight for valid moves
         for target in valid_targets:
             tx, ty = target
             pygame.draw.rect(screen, (255, 255, 0), 
@@ -424,15 +402,15 @@ def main():
         winner = check_victory(game)
         
         if winner:
-            message = "Brancas venceram!" if winner == "W" else "Pretas venceram!"
+            message = "White wins!" if winner == "W" else "Black wins!"
             text_surface = font.render(message, True, (255, 255, 255))
             text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 40))
             screen.blit(text_surface, text_rect)
 
-            # Botão de Reiniciar
+            # Reset button
             GREEN = (0, 255, 0)
             WHITE = (255, 255, 255)
-            button_text = button_font.render("Reiniciar", True, WHITE)
+            button_text = button_font.render("Reset", True, WHITE)
             text_rect = button_text.get_rect()
             padding_x = 20
             padding_y = 10
@@ -451,7 +429,7 @@ def main():
             
             pygame.display.flip()
 
-            # Esperar clique no botão
+            # Wait for button click
             waiting = True
             while waiting:
                 for event in pygame.event.get():
@@ -460,7 +438,7 @@ def main():
                         exit()
                     elif event.type == pygame.MOUSEBUTTONDOWN:
                         if button_rect.collidepoint(event.pos):
-                            # Reiniciar o jogo
+                            # Reset game
                             game.reset()
                             selected_piece = None
                             valid_targets = []
@@ -475,24 +453,24 @@ def main():
                 running = False
 
             if not winner and event.type == pygame.MOUSEBUTTONDOWN:
-                # Obter posição do clique
+                # Get click position
                 mouse_x, mouse_y = pygame.mouse.get_pos()
                 col = mouse_x // TILE_SIZE
                 row = mouse_y // TILE_SIZE
 
-                # Se não há peça selecionada, tentar selecionar uma do jogador atual
+                # If no piece is selected, try to select one belonging to the current player
                 if selected_piece is None:
                     if 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE:
                         if game.board[row][col] == current_player:
                             selected_piece = (col, row)
-                            # Encontrar todos os movimentos válidos para esta peça
+                            # Find all valid moves for this piece
                             all_moves = valid_moves(game.board, current_player)
                             valid_targets = [(move[2], move[3]) for move in all_moves 
                                           if move[0] == col and move[1] == row]
                 
-                # Se já tem peça selecionada, tentar mover
+                # If a piece is already selected, attempt to move it
                 else:
-                    # Verificar se clicou em um movimento válido
+                    # Check if a valid move was clicked
                     if (col, row) in valid_targets:
                         # Encontrar o movimento correspondente
                         for move in valid_moves(game.board, current_player):
@@ -501,7 +479,7 @@ def main():
                                 current_player = 'B' if current_player == 'W' else 'W'
                                 break
                     
-                    # Resetar seleção independentemente de ter movido ou não
+                    # Reset selection regardless of whether a move was made or not
                     selected_piece = None
                     valid_targets = []
 
