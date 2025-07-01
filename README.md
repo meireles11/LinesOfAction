@@ -1,4 +1,4 @@
-# Lines Of Action
+# Lines of Action
 
 A Python implementation of the board game *Lines of Action*, created as part of a university project.  
 Includes two game modes: Player vs Player and Player vs AI.
