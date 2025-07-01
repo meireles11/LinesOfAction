@@ -221,8 +221,8 @@ class LineOfAction:
         # Draws the board and its pieces
         for y in range(self.size):
             for x in range(self.size):
-                pygame.draw.rect(screen, BROWN, (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)) #Fills the board with brown 
-                pygame.draw.rect(screen, BLACK, (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE), 3) #Draws the boards with black
+                pygame.draw.rect(screen, BROWN, (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)) # Fills the board with brown 
+                pygame.draw.rect(screen, BLACK, (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE), 3) # Draws the boards with black
                 piece = self.board[y][x]
                 if piece != '.':
                     pygame.draw.circle(screen, PIECES[piece], (x * TILE_SIZE + TILE_SIZE // 2, y * TILE_SIZE + TILE_SIZE // 2), TILE_SIZE // 3) #Dras the pieces
@@ -235,7 +235,7 @@ class LineOfAction:
         xi, yi, xf, yf = move
         self.board[yf][xf] = self.board[yi][xi]
         self.board[yi][xi] = '.'
-        self.player = 'B' if self.player == 'W' else 'W'  # Troca de jogador
+        self.player = 'B' if self.player == 'W' else 'W'  # Change player
     
     def reset(self):
         self.board = self.initialize_board()
@@ -244,30 +244,24 @@ class LineOfAction:
 
 
 def apply_move_copy(state, move):
-    """Aplica um movimento ao estado e retorna um novo estado sem modificar o original e sem trocar de jogador."""
-    new_state = deepcopy(state)  # Criar uma cópia do estado
+    # Applies a move to the state and returns a new state without modifying the original and without switching players.
+    new_state = deepcopy(state)  # Create a copy of the state
     xi, yi, xf, yf = move
     new_state.board[yf][xf] = new_state.board[yi][xi]
     new_state.board[yi][xi] = '.'
     return new_state
 
-def minimax(state, depth, maximizing_player, alpha, beta, original_player):
-    """Implementação do algoritmo Minimax com poda alfa-beta."""
-    winner = check_victory(state)
-    if winner:
-        if winner == state.player:
-            return 10000
-        else:
-            return -10000
-    if depth == 0:
-        return combined_evaluation(state.board, original_player)
-    
+def minimax(state, depth, maximizing_player, alpha, beta):
+    # Implementation of the Minimax algorithm with alpha-beta pruning.
     if maximizing_player:
         max_eval = -math.inf
         for move in valid_moves(state.board, state.player):
             new_state = apply_move_copy(state, move)
+            winner = check_victory(state)
+            if winner is not None or depth == 0:
+              return combined_evaluation(state.board, state.player)
             new_state.player = 'B' if new_state.player == 'W' else 'W'
-            evaluation = minimax(new_state, depth - 1, False, alpha, beta, original_player)
+            evaluation = minimax(new_state, depth - 1, False, alpha, beta)
             max_eval = max(max_eval, evaluation)
             alpha = max(alpha, evaluation)
             if beta <= alpha:
@@ -277,26 +271,29 @@ def minimax(state, depth, maximizing_player, alpha, beta, original_player):
         min_eval = math.inf
         for move in valid_moves(state.board, state.player):
             new_state = apply_move_copy(state, move)
+            winner = check_victory(state)
+            if winner is not None or depth == 0:
+              return combined_evaluation(state.board, state.player)
             new_state.player = 'B' if new_state.player == 'W' else 'W'
-            evaluation = minimax(new_state, depth - 1, True, alpha, beta, original_player)
+            evaluation = minimax(new_state, depth - 1, True, alpha, beta)
             min_eval = min(min_eval, evaluation)
             beta = min(beta, evaluation)
             if beta <= alpha:
                 break
         return min_eval
 
+
 def best_move(state, depth):
-    """Retorna o melhor movimento para o jogador atual usando Minimax."""
+    # Returns the best move to the current player with Minimax
     best_move = None
     alpha, beta = -math.inf, math.inf
-    maximizing = state.player == True
-    original_player = state.player
+    maximizing = state.player == 'B'
     best_score = -math.inf if maximizing else math.inf
 
     for move in valid_moves(state.board, state.player):
         new_state = apply_move_copy(state, move)
         new_state.player = 'B' if new_state.player == 'W' else 'W'
-        score = minimax(new_state, depth - 1, not maximizing, alpha, beta, original_player)
+        score = minimax(new_state, depth - 1, not maximizing, alpha, beta)
 
         if (maximizing and score > best_score) or (not maximizing and score < best_score):
             best_score = score
@@ -315,10 +312,9 @@ def best_move(state, depth):
 
 
 def mcts_search(state, simulations=1000):
-    """
-    Implementação simplificada do Monte Carlo Tree Search (MCTS).
-    Faz simulações aleatórias e escolhe a jogada que levou a mais vitórias.
-    """
+    #Simplified implementation of Monte Carlo Tree Search (MCTS).
+    # Performs random simulations and selects the move that led to the most victories.
+
     move_scores = {move: 0 for move in valid_moves(state.board, state.player)}
 
     for _ in range(simulations):
@@ -328,70 +324,51 @@ def mcts_search(state, simulations=1000):
         result = simulate_game(new_state)
         move_scores[move] += result
 
-    # Escolhe a jogada com maior score nas simulações
+    # Chose the move with the highest score in the simulations
     best_move = max(move_scores, key=move_scores.get)
     return best_move
 
 def simulate_game(state):
     """
-    Simula um jogo aleatório a partir do estado atual e retorna:
-    - 1 se o jogador atual ganhar
-    - -1 se o oponente ganhar
-    - 0 se der empate
+    Simulates a random game from the current state and returns:
+        1 if the current player wins
+        -1 if the opponent wins
+        0 if it's a draw
     """
     player = state.player
     while True:
         moves = valid_moves(state.board, player)
         if not moves:
-            return 0  # Empate
+            return 0  # Draw
 
         move = random.choice(moves)
         state = apply_move_copy(state, move)
 
-        # Verifica se há um vencedor após a jogada
+        # Checks if there is a winner after the move 
         winner = check_victory(state)
         if winner is not None:
-            return 1 if winner == player else -1  # Quem fez a última jogada ganha
+            return 1 if winner == player else -1  # The player that did the last move wins
 
-        player = 'B' if player == 'W' else 'W'  # Alterna o jogador
+        player = 'B' if player == 'W' else 'W'  # Change player
 
 def strategy(state, depth=3):
-    """
-    Escolhe se usa Minimax ou Monte Carlo para determinar a melhor jogada.
-    Usa Minimax para estados iniciais (poucas jogadas) e MCTS para estados mais complexos.
-    """
+    # Chooses whether to use Minimax or Monte Carlo to determine the best move.
+    # Uses Minimax for early-game states (few moves made) and MCTS for more complex states.
+
     num_moves = len(valid_moves(state.board, state.player))
 
-    if num_moves <= 1000:  # Número arbitrário, pode ser ajustado conforme testes
-        return best_move(state, depth)  # Usa Minimax
+    if num_moves <= 20: 
+        return best_move(state, depth)  # Minimax
     else:
-        return mcts_search(state, simulations=1000)  # Usa MCTS quando há muitas opções
+        return mcts_search(state, simulations=1000)  # MCTS
 
 
-#def main():
-#    pygame.init()
-#    screen = pygame.display.set_mode((TILE_SIZE * BOARD_SIZE, TILE_SIZE * BOARD_SIZE))
-#    pygame.display.set_caption("Lines of Action") #Sets the title
-#
-#    game = LineOfAction()  
-#    clock = pygame.time.Clock()
-#
-#    running = True
-#    while running: #keeps the game runnig until the user quits
-#        screen.fill((0, 0, 0))  # "Cleans" the last game filling the background with black
-#       game.display_board(screen)
-#
-#        for event in pygame.event.get():
-#            if event.type == pygame.QUIT:
-#                running = False
-#
-#        clock.tick(60)  # Limits to 60 frames per second
-#
-#    pygame.quit()
+
 random_ai_delay = 3000
 def random_strategy(state):
         moves = valid_moves(state.board, state.player)
-        pygame.time.delay(random_ai_delay)  # Delay específico para AI aleatória
+        pygame.time.delay(random_ai_delay) # 
+         # Specific delay for random AI
         return random.choice(moves) if moves else None
 
 def main():
@@ -399,9 +376,9 @@ def main():
     WIDTH = TILE_SIZE * BOARD_SIZE
     HEIGHT = TILE_SIZE * BOARD_SIZE
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Lines of Action - Humano vs AI")
+    pygame.display.set_caption("Lines of Action - Human vs AI")
 
-    # Cores e configurações de UI
+    # Colors and configurations of UI
     LIGHT_BROWN = (196, 164, 132)
     DARK_BROWN = (139, 69, 19)
     BUTTON_COLORS = {
@@ -410,25 +387,25 @@ def main():
         'pressed': (180, 150, 120)
     }
     
-    # Delays para IA
-    RANDOM_AI_DELAY = 1000  # 1 segundo para a IA aleatória
-    MINIMAX_AI_DELAY = 500   # 0.5 segundos para Minimax
+    # AI Delays
+    RANDOM_AI_DELAY = 1000  # 1 second for random AI
+    MINIMAX_AI_DELAY = 500   # 0.5 seconds for Minimax
 
-    # Estados do jogo
+    # States of the game
     MENU = 0
     PLAYING = 1
     game_state = MENU
 
-    # Configurações de dificuldade
+    # Difficulty configurations
     AI_DIFFICULTIES = {
-        'muito facil': {'type': 'random', 'depth': 0, 'delay': RANDOM_AI_DELAY},
-        'facil': {'type': 'minimax', 'depth': 1, 'delay': MINIMAX_AI_DELAY},
-        'médio': {'type': 'minimax', 'depth': 2, 'delay': MINIMAX_AI_DELAY},
-        'dificil': {'type': 'minimax', 'depth': 3, 'delay': MINIMAX_AI_DELAY}
+        'Beginner': {'type': 'random', 'depth': 0, 'delay': RANDOM_AI_DELAY},
+        'Easy': {'type': 'minimax', 'depth': 1, 'delay': MINIMAX_AI_DELAY},
+        'Medium': {'type': 'minimax', 'depth': 2, 'delay': MINIMAX_AI_DELAY},
+        'Hard': {'type': 'minimax', 'depth': 3, 'delay': MINIMAX_AI_DELAY}
     }
     current_difficulty = None
 
-    # Inicialização
+    # Inicialization
     clock = pygame.time.Clock()
     font = pygame.font.SysFont('Arial', 24)
     title_font = pygame.font.SysFont('Arial', 36, bold=True)
@@ -436,18 +413,18 @@ def main():
     def draw_menu():
         screen.fill(BROWN)
         
-        # Título centralizado
+        # Centered title
         title = title_font.render("Lines of Action", True, WHITE)
         title_rect = title.get_rect(center=(WIDTH//2, HEIGHT//5.2))
         screen.blit(title, title_rect)
         
-        subtitle = font.render("Selecione a dificuldade:", True, WHITE)
+        subtitle = font.render("Select difficulty:", True, WHITE)
         subtitle_rect = subtitle.get_rect(center=(WIDTH//2, HEIGHT//4))
         screen.blit(subtitle, subtitle_rect)
 
-        # Botões centralizados verticalmente
+        # Buttons vertically centered
         buttons = []
-        button_height = HEIGHT//2 - 100  # Ajuste para centralizar os 4 botões
+        button_height = HEIGHT//2 - 100  # Adjust to center the 4 buttons
         for i, (diff, config) in enumerate(AI_DIFFICULTIES.items()):
             button_rect = pygame.Rect(WIDTH//2 - 100, button_height + i*70, 200, 50)
             color = BUTTON_COLORS['normal']
@@ -472,13 +449,13 @@ def main():
     def draw_game():
         screen.fill(BROWN)
         
-        # Desenha o tabuleiro
+        # Draw the board
         for x in range(0, WIDTH, TILE_SIZE):
             pygame.draw.line(screen, BLACK, (x, 0), (x, HEIGHT), 2)
         for y in range(0, HEIGHT, TILE_SIZE):
             pygame.draw.line(screen, BLACK, (0, y), (WIDTH, y), 2)
         
-        # Desenha as peças
+        # Draw the pieces
         for y in range(BOARD_SIZE):
             for x in range(BOARD_SIZE):
                 piece = game.board[y][x]
@@ -486,34 +463,42 @@ def main():
                     pygame.draw.circle(screen, PIECES[piece],
                                      (x*TILE_SIZE + TILE_SIZE//2, y*TILE_SIZE + TILE_SIZE//2),
                                      TILE_SIZE//3)
+                    
+    
 
-        # Destaca peça selecionada e movimentos válidos
+        bxi, byi , bxf, byf = best_move(game, 2)
+        # Highlight the selected piece and valid moves
         if selected_piece:
             x, y = selected_piece
             pygame.draw.rect(screen, GREEN, (x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE), 3)
             for move in piece_moves:
-                _, _, mx, my = move
-                pygame.draw.rect(screen, (255, 255, 0), 
-                           (mx * TILE_SIZE, my * TILE_SIZE, TILE_SIZE, TILE_SIZE), 3)
+                mxi, myi, mxf, myf = move
+                # Highlight with color blue the best move
+                if mxi == bxi and myi == byi and mxf == bxf and myf == byf:
+                    pygame.draw.rect(screen, (0, 191, 255), 
+                         (mxf * TILE_SIZE, myf * TILE_SIZE, TILE_SIZE, TILE_SIZE), 3)
+                else:
+                    pygame.draw.rect(screen, (255, 255, 0), 
+                           (mxf * TILE_SIZE, myf * TILE_SIZE, TILE_SIZE, TILE_SIZE), 3)
 
-        # Informações do jogo
+        # Game information
         info_texts = [
-            f"Jogador: {'Pretas (Tu)' if game.player == 'B' else 'Brancas (IA)'}",
-            f"Dificuldade: {current_difficulty.replace('_', ' ').title()}",
+            f"Player: {'Black (You)' if game.player == 'B' else 'White (AI)'}",
+            f"Difficulty: {current_difficulty.replace('_', ' ').title()}",
         ]
         
         for i, text in enumerate(info_texts):
             text_surface = font.render(text, True, WHITE)
             screen.blit(text_surface, (10, 10 + i*30))
         
-        # Mensagem de vitória
+        # Win message
         if winner:
-            message = "Brancas venceram!" if winner == 'W' else "Pretas venceram!"
+            message = "White wins!" if winner == 'W' else "Black wins!"
             text_surface = font.render(message, True, GREEN)
             text_rect = text_surface.get_rect(center=(WIDTH//2, HEIGHT//2 - 20))
             screen.blit(text_surface, text_rect)
             
-            restart_text = font.render("Pressione R para voltar ao menu", True, WHITE)
+            restart_text = font.render("Press R to return to the menu", True, WHITE)
             restart_rect = restart_text.get_rect(center=(WIDTH//2, HEIGHT//2 + 20))
             screen.blit(restart_text, restart_rect)
 
@@ -523,7 +508,7 @@ def main():
         pygame.time.delay(RANDOM_AI_DELAY)
         return random.choice(moves) if moves else None
 
-    # Variáveis do jogo
+    # Game Variables
     game = None
     selected_piece = None
     piece_moves = []
@@ -577,7 +562,7 @@ def main():
                     x, y = mx // TILE_SIZE, my // TILE_SIZE
 
                     if selected_piece is None:
-                        # Seleciona peça (se for uma peça do jogador)
+                        # Select piece (if it belongs to the player)
                         if 0 <= y < BOARD_SIZE and 0 <= x < BOARD_SIZE and game.board[y][x] == 'B':
                             selected_piece = (x, y)
                             piece_moves = [m for m in valid_moves(game.board, 'B') if m[0] == x and m[1] == y]
@@ -585,7 +570,7 @@ def main():
                         xi, yi = selected_piece
                         move = (xi, yi, x, y)
                         
-                        # Se clicar em uma posição válida, move a peça
+                        # If clicking on a valid position, move the piece
                         if move in piece_moves:
                             game.apply_move(move)
                             winner = check_victory(game)
@@ -593,16 +578,16 @@ def main():
                             piece_moves = []
                             ai_turn = True
                             last_move_time = current_time
-                        # Se clicar em outra peça do jogador, seleciona essa nova peça
+                        # If clicking on another piece of the player, select that new piece
                         elif 0 <= y < BOARD_SIZE and 0 <= x < BOARD_SIZE and game.board[y][x] == 'B':
                             selected_piece = (x, y)
                             piece_moves = [m for m in valid_moves(game.board, 'B') if m[0] == x and m[1] == y]
-                        # Se clicar em qualquer outro lugar, desseleciona a peça
+                        # If clicking anywhere else, deselect the piece
                         else:
                             selected_piece = None
                             piece_moves = []
 
-        # Lógica da IA
+        # AI logic
         if game_state == PLAYING and ai_turn and not winner and game.player == 'W':
             config = AI_DIFFICULTIES[current_difficulty]
             if current_time - last_move_time > config['delay']:
@@ -616,7 +601,7 @@ def main():
                     winner = check_victory(game)
                 ai_turn = False
 
-        # Renderização
+        # Rendering
         if game_state == MENU:
             draw_menu()
         elif game_state == PLAYING:
