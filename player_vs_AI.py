@@ -367,8 +367,7 @@ def strategy(state, depth=3):
 random_ai_delay = 3000
 def random_strategy(state):
         moves = valid_moves(state.board, state.player)
-        pygame.time.delay(random_ai_delay) # 
-         # Specific delay for random AI
+        pygame.time.delay(random_ai_delay) # Specific delay for random AI
         return random.choice(moves) if moves else None
 
 def main():
